@@ -1,3 +1,3 @@
-# antithesis-instrumentation-rust
+# Antithesis Rust Instrumentation Shim
 
-Work in progress. More details coming soon.
+This is a work-in-progress and is not yet ready for general use; please check back later.
