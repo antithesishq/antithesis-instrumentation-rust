@@ -1,0 +1,11 @@
+[package]
+name = "antithesis-instrumentation-rust"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+links = "antithesis_instrumentation"
+
+[dependencies]
+
+[build-dependencies]
+cc = "1"
