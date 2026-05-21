@@ -2,6 +2,16 @@
 name = "antithesis-instrumentation"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+readme = "README.md"
+keywords = ["antithesis", "testing", "fuzzing", "quality"]
+categories= ["development-tools::testing"] # https://crates.io/category_slugs
+repository = "https://github.com/antithesishq/antithesis-instrumentation-rust"
+homepage = "https://github.com/antithesishq/antithesis-instrumentation-rust"
+documentation = "https://antithesis.com/docs/using_antithesis/sdk/rust/instrumentation/"
+description = """
+Methods for Rust programs to compile with coverage instrumentation for the Antithesis platform.
+"""
 build = "build.rs"
 links = "antithesis_instrumentation"
 
