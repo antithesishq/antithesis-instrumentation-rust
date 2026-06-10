@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fs};
 use std::process::Command;
 
 const CPP_SDK_VERSION: &str = "0.4.8";
@@ -8,15 +8,19 @@ fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let header = format!("{out_dir}/antithesis_instrumentation.h");
 
-    let url = format!(
-        "https://raw.githubusercontent.com/antithesishq/antithesis-sdk-cpp/\
-         {CPP_SDK_VERSION}/antithesis_instrumentation.h"
-    );
-    let curl = Command::new("curl")
-        .args(["-fsSL", "-o", &header, &url])
-        .status()
-        .expect("failed to spawn curl");
-    assert!(curl.success(), "curl exited {curl} (url: {url})");
+    if let Ok(env_header) = env::var("ANTITHESIS_INSTRUMENTATION_RS_HEADER") {
+        fs::copy(env_header, header).expect("should be able to copy header");
+    } else {
+        let url = format!(
+            "https://raw.githubusercontent.com/antithesishq/antithesis-sdk-cpp/\
+             {CPP_SDK_VERSION}/antithesis_instrumentation.h"
+        );
+        let curl = Command::new("curl")
+            .args(["-fsSL", "-o", &header, &url])
+            .status()
+            .expect("failed to spawn curl (hint: set $ANTITHESIS_INSTRUMENTATION_RS_HEADER to build offline)");
+        assert!(curl.success(), "curl exited {curl} (url: {url})");
+    }
 
     // Compile libantithesis_instrumentation.a from antitithesis_instrumentation.c
     cc::Build::new()
