@@ -1,0 +1,65 @@
+name: Vendored Header Check
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  pinned:
+    name: Matches pinned upstream version
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    # The pinned version lives in exactly one place: CPP_SDK_VERSION at the top of
+    # scripts/update-vendored-header.sh. Read it from there rather than repeating it.
+    - name: Read pinned antithesis-sdk-cpp version
+      id: version
+      run: |
+        version="$(sed -n 's/^CPP_SDK_VERSION="\(.*\)"$/\1/p' scripts/update-vendored-header.sh)"
+        test -n "$version" || { echo "could not read CPP_SDK_VERSION from scripts/update-vendored-header.sh"; exit 1; }
+        echo "Pinned antithesis-sdk-cpp version: $version"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Compare vendored header against pinned upstream tag
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        url="https://raw.githubusercontent.com/antithesishq/antithesis-sdk-cpp/${VERSION}/antithesis_instrumentation.h"
+        curl -fsSL -o /tmp/upstream-pinned.h "$url"
+        if diff -u vendor/antithesis_instrumentation.h /tmp/upstream-pinned.h \
+             --label 'vendor/antithesis_instrumentation.h' --label "upstream ${VERSION}"; then
+          echo "OK: vendored header is byte-identical to antithesis-sdk-cpp ${VERSION}."
+        else
+          echo
+          echo "::error::vendor/antithesis_instrumentation.h does not match antithesis-sdk-cpp ${VERSION} ($url)."
+          echo "Either the vendored file was edited locally, or upstream moved/edited the ${VERSION} tag."
+          echo "Refresh it with ./scripts/update-vendored-header.sh."
+          exit 1
+        fi
+
+  upstream-drift:
+    name: Upstream header has changed
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    # Compared against upstream's default branch rather than its "latest tag": upstream
+    # tag names are inconsistent (v0.4.6, then 0.4.7, 0.4.8) and the tags API does not
+    # return them in semver order, so picking the newest tag automatically is unreliable.
+    # A failure here is a nudge for a maintainer to review and bump the pinned version.
+    - name: Compare vendored header against upstream main
+      run: |
+        url="https://raw.githubusercontent.com/antithesishq/antithesis-sdk-cpp/main/antithesis_instrumentation.h"
+        curl -fsSL -o /tmp/upstream-main.h "$url"
+        if diff -u vendor/antithesis_instrumentation.h /tmp/upstream-main.h \
+             --label 'vendor/antithesis_instrumentation.h' --label 'upstream main'; then
+          echo "OK: vendored header still matches antithesis-sdk-cpp main."
+        else
+          echo
+          echo "::error::antithesis_instrumentation.h has changed on antithesis-sdk-cpp main."
+          echo "Review the diff above and, if there is a new release, bump CPP_SDK_VERSION in"
+          echo "scripts/update-vendored-header.sh and run it to refresh vendor/."
+          exit 1
+        fi

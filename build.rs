@@ -1,39 +1,27 @@
 use std::env;
-use std::process::Command;
 
-const CPP_SDK_VERSION: &str = "0.4.8";
+// antithesis_instrumentation.h is vendored in vendor/ rather than downloaded at build
+// time; refresh it with scripts/update-vendored-header.sh.
+const VENDOR_DIR: &str = "vendor";
 
 fn main() {
     // Rerun hints
+    println!("cargo::rerun-if-changed={VENDOR_DIR}/antithesis_instrumentation.h");
     println!("cargo::rerun-if-changed=src/antithesis_instrumentation.c");
     println!("cargo::rerun-if-changed=build.rs");
 
     // This crate builds for Linux targets only. Stop here on every other
-    // target: `curl` and `cc` below would fail with an error that hides the
-    // real problem. `src/lib.rs` then stops the build with a clear message that
-    // tells the user how to integrate this crate.
+    // target: `cc` below would fail with an error that hides the real problem.
+    // `src/lib.rs` then stops the build with a clear message that tells the user
+    // how to integrate this crate.
     if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("linux") {
         return;
     }
 
-    // Get antithesis_instrumentation.h from the antithesis-sdk-cpp github
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let header = format!("{out_dir}/antithesis_instrumentation.h");
-
-    let url = format!(
-        "https://raw.githubusercontent.com/antithesishq/antithesis-sdk-cpp/\
-         {CPP_SDK_VERSION}/antithesis_instrumentation.h"
-    );
-    let curl = Command::new("curl")
-        .args(["-fsSL", "-o", &header, &url])
-        .status()
-        .expect("failed to spawn curl");
-    assert!(curl.success(), "curl exited {curl} (url: {url})");
-
     // Compile libantithesis_instrumentation.a from antitithesis_instrumentation.c
     cc::Build::new()
         .file("src/antithesis_instrumentation.c")
-        .include(&out_dir)
+        .include(VENDOR_DIR)
         .opt_level(3)
         .compile("antithesis_instrumentation");
 }
