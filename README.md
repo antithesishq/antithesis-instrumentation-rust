@@ -33,7 +33,7 @@ The name `antithesis` is an example. Use any name that you prefer.
 The two parts do different work:
 
 - The `[target.'cfg(target_os = "linux")']` table keeps this crate out of the dependency graph for macOS, for Windows, and for all other targets. This part stops the build failure.
-- `optional = true` keeps this crate out of your usual Linux builds. This part is not necessary, but it is better. The `#[cfg]` gate in step 2 acts on your Rust code only. Cargo does not read your Rust code, so a dependency that is not optional is built for each `cargo build` and `cargo test` on Linux. The build script runs, and it downloads a C header, even when the gate removes the `use` and nothing links the shim.
+- `optional = true` keeps this crate out of your usual Linux builds. This part is not necessary, but it is better. The `#[cfg]` gate in step 2 acts on your Rust code only. Cargo does not read your Rust code, so a dependency that is not optional is built for each `cargo build` and `cargo test` on Linux. The build script runs, and it compiles the C shim, even when the gate removes the `use` and nothing links the shim.
 
 ### 2. Gate the use of the crate on the target and on your feature
 
@@ -83,3 +83,15 @@ A message that starts with `antithesis-instrumentation builds for Linux targets 
 When you compile your code with the `-sanitizer-coverage-trace-pc-guard` from the documentation above, the Rust compiler adds two callbacks (`__sanitizer_cov_trace_pc_guard_init` and `__sanitizer_cov_trace_pc_guard`) at various points in your code. The former on load and the latter once per basic block.
 
 This crate creates shim implementations for those two functions that detect whether you're running in Antithesis, and if so, forward the calls to the Antithesis system. When running outside of Antithesis, the shims become no-ops.
+
+The shims come from `antithesis_instrumentation.h`, which is vendored from the [Antithesis C++ SDK](https://github.com/antithesishq/antithesis-sdk-cpp) into `vendor/` and compiled by `build.rs`. Vendoring it keeps builds offline- and hermetic-friendly: nothing is downloaded at build time.
+
+## Updating the vendored header
+
+Set `CPP_SDK_VERSION` at the top of [`scripts/update-vendored-header.sh`](scripts/update-vendored-header.sh) to the desired `antithesis-sdk-cpp` tag and run it:
+
+```sh
+./scripts/update-vendored-header.sh
+```
+
+Then run `cargo build` to confirm the new header still compiles, and add a `CHANGELOG.md` entry.
