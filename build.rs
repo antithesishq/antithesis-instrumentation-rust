@@ -4,6 +4,18 @@ use std::process::Command;
 const CPP_SDK_VERSION: &str = "0.4.8";
 
 fn main() {
+    // Rerun hints
+    println!("cargo::rerun-if-changed=src/antithesis_instrumentation.c");
+    println!("cargo::rerun-if-changed=build.rs");
+
+    // This crate builds for Linux targets only. Stop here on every other
+    // target: `curl` and `cc` below would fail with an error that hides the
+    // real problem. `src/lib.rs` then stops the build with a clear message that
+    // tells the user how to integrate this crate.
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("linux") {
+        return;
+    }
+
     // Get antithesis_instrumentation.h from the antithesis-sdk-cpp github
     let out_dir = env::var("OUT_DIR").unwrap();
     let header = format!("{out_dir}/antithesis_instrumentation.h");
@@ -24,8 +36,4 @@ fn main() {
         .include(&out_dir)
         .opt_level(3)
         .compile("antithesis_instrumentation");
-
-    // Rerun hints
-    println!("cargo::rerun-if-changed=src/antithesis_instrumentation.c");
-    println!("cargo::rerun-if-changed=build.rs");
 }

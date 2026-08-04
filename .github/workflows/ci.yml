@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Build (linux)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions-rust-lang/setup-rust-toolchain@v1.8.0
+      with:
+        toolchain: stable
+
+    - name: Cargo Build
+      run: cargo build
+
+  # A build for a target that is not Linux must stop, and the message must tell
+  # the user how to integrate this crate. See the README.
+  reject-non-linux:
+    name: Reject (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions-rust-lang/setup-rust-toolchain@v1.8.0
+      with:
+        toolchain: stable
+
+    - name: Cargo Build must fail with the integration message
+      run: |
+        if cargo build 2>build.log; then
+          echo "::error::cargo build succeeded, but this target is not Linux"
+          cat build.log
+          exit 1
+        fi
+        cat build.log
+        if ! grep -q "builds for Linux targets only" build.log; then
+          echo "::error::the build stopped, but not with the integration message"
+          exit 1
+        fi
