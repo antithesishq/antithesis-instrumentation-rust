@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-CPP_SDK_VERSION="0.4.8"
+CPP_SDK_VERSION="0.5.1"
 
 URL="https://raw.githubusercontent.com/antithesishq/antithesis-sdk-cpp/${CPP_SDK_VERSION}/antithesis_instrumentation.h"
 DEST="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/vendor/antithesis_instrumentation.h"
